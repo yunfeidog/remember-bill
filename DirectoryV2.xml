@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+ <trees>
+     <tree path="/src/main/java/com/cxk/mapper" title="DAO层-操作数据库"/>
+     <tree path="/src/main/java/com/cxk/controller" title="控制层-前端接口"/>
+     <tree path="/src/main/java/com/cxk/service" title="业务层-业务逻辑"/>
+     <tree path="/src/main/java/com/cxk/model/domain/request" title="前端请求"/>
+     <tree path="/src/main/java/com/cxk/model" title="实体类"/>
+     <tree path="/src/main/java/com/cxk/common/Result.java" title="统一返回结果" extension="java"/>
+     <tree path="/src/main/java/com/cxk/common/Code.java" title="状态码" extension="java"/>
+     <tree path="/src/main/java/com/cxk/constant/UserConstant.java" title="用户常量" extension="java"/>
+ </trees>
