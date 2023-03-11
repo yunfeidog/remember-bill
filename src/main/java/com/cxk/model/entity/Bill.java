@@ -1,4 +1,4 @@
-package com.cxk.model.domain;
+package com.cxk.model.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 

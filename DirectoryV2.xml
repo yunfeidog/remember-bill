@@ -8,4 +8,5 @@
      <tree path="/src/main/java/com/cxk/common/Result.java" title="统一返回结果" extension="java"/>
      <tree path="/src/main/java/com/cxk/common/Code.java" title="状态码" extension="java"/>
      <tree path="/src/main/java/com/cxk/constant/UserConstant.java" title="用户常量" extension="java"/>
+     <tree path="/src/main/java/com/cxk/exception" title="异常控制"/>
  </trees>

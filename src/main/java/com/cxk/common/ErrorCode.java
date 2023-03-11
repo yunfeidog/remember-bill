@@ -2,6 +2,10 @@ package com.cxk.common;
 
 
 
+/**
+ *
+ */
+
 public enum ErrorCode {
 
     SUCCESS(0, "成功");

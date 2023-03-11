@@ -2,7 +2,7 @@ package com.cxk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.cxk.model.domain.User;
+import com.cxk.model.entity.User;
 import com.cxk.service.UserService;
 import com.cxk.mapper.UserMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,6 @@ import javax.servlet.http.HttpServletRequest;
 import static com.cxk.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
- * @author houyunfei
  * @description 针对表【tb_user(用户表)】的数据库操作Service实现
  * @createDate 2023-02-10 13:48:46
  */
@@ -42,7 +41,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @return 用户信息
      */
     @Override
-    public User userlogin(String phone, String userPassword, HttpServletRequest request) {
+    public User userLogin(String phone, String userPassword, HttpServletRequest request) {
         //校验
         if (StringUtils.isAnyBlank(phone, userPassword)) {
             //todo 抛出异常  存在参数为空
@@ -84,7 +83,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public Boolean register(String userName, String phone, String userPassword, String checkPassword) {
+    public Boolean userRegister(String userName, String phone, String userPassword, String checkPassword) {
 
         //校验
         if (StringUtils.isAnyBlank(userName, phone, userPassword, checkPassword)) {

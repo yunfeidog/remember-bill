@@ -2,8 +2,11 @@ package com.cxk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.cxk.model.domain.Bill;
+import com.cxk.model.domain.request.StatisticsRequest;
+import com.cxk.model.entity.Bill;
 import com.cxk.model.domain.request.BillAddRequest;
+import com.cxk.model.domain.response.BillResponse;
+import com.cxk.model.domain.response.DateOrCategoryResponse;
 import com.cxk.service.BillService;
 import com.cxk.mapper.BillMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -11,12 +14,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.Arrays;
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * @author houyunfei
  * @description 针对表【tb_bill(账单表)】的数据库操作Service实现
  * @createDate 2023-02-10 16:14:48
  */
@@ -46,15 +48,20 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
         bill1.setUserId(userId);
         bill1.setMoney(bill.getBillAmount());
         bill1.setBillType(bill.getBillType());
-        List<String> billCategory = bill.getBillCategory();
-        //将分类数组转换为字符串存入数据库
-        String category = StringUtils.join(billCategory, ",");
-        bill1.setCategory(category);
-        log.info("category:{}", category);
-        bill1.setCategory(category);
+        //现在分类不是数组了，是字符串
+//        List<String> billCategory = bill.getBillCategory();
+//        //将分类数组转换为字符串存入数据库
+//        String category = StringUtils.join(billCategory, ",");
+//        bill1.setCategory(category);
+//        log.info("category:{}", category);
+//        bill1.setCategory(category);
+        bill1.setCategory(bill.getBillCategory());
         bill1.setBillDate(bill.getBillDate());
         bill1.setShop(bill.getBillShopkeeper());
         bill1.setRemark(bill.getBillRemark());
+
+        log.info("bill1:{}", bill1);
+
         boolean saveResult = this.save(bill1);
         if (!saveResult) {
             //todo 抛出异常  账单信息保存失败
@@ -90,16 +97,17 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
             billAddRequest.setBillDate(bill.getBillDate());
             billAddRequest.setBillShopkeeper(bill.getShop());
             billAddRequest.setBillRemark(bill.getRemark());
-            String category = bill.getCategory();
-            String[] split = category.split(",");
-            List<String> strings = Arrays.asList(split);
-            billAddRequest.setBillCategory(strings);
+            //现在分类不是数组了，是字符串
+//            String category = bill.getCategory();
+//            String[] split = category.split(",");
+//            List<String> strings = Arrays.asList(split);
+//            billAddRequest.setBillCategory(strings);
+            billAddRequest.setBillCategory(bill.getCategory());
             return billAddRequest;
         }).collect(Collectors.toList());
         log.info("billList1:{}", billList1);
         return billList1;
     }
-
 
 
     @Override
@@ -146,6 +154,129 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
 
     }
 
+    @Override
+    public List<DateOrCategoryResponse> getBillListByDateOrCategory(String category, Date date, Integer userId) {
+        if (userId == null) {
+            //todo 抛出异常  用户id为空
+            log.error("用户id为空");
+            return null;
+        }
+        if (StringUtils.isBlank(category) && date == null) {
+            //todo 抛出异常  分类和日期都为空
+            log.error("分类和日期都为空");
+            return null;
+        }
+        QueryWrapper<Bill> billQueryWrapper = new QueryWrapper<>();
+        billQueryWrapper.eq("user_id", userId);
+        if (StringUtils.isNotBlank(category)) {
+            billQueryWrapper.eq("category", category);
+        }
+        if (date != null) {
+            billQueryWrapper.eq("bill_date", date);
+        }
+        List<Bill> billList = billMapper.selectList(billQueryWrapper);
+        log.info("userId=" + userId);
+        log.info("category= " + category);
+        log.info("date=" + date);
+        if (billList == null) {
+            //todo 抛出异常  账单信息为空
+            log.error("账单信息为空，没有查询到任何数据");
+            return null;
+        }
+        log.info("billList= " + billList);
+
+        //将账单信息转换为前端需要的格式 并且按照日期分类
+        List<DateOrCategoryResponse> dateOrCategoryResponseList = new ArrayList<>();
+        for (int i = 0; i < billList.size(); i++) {
+            Bill bill = billList.get(i);
+            //创建一个账单信息
+            BillResponse billResponse = new BillResponse();
+            billResponse.setId(bill.getId());
+            billResponse.setTypeName(bill.getCategory());
+            billResponse.setPayType(bill.getBillType());
+            billResponse.setAmount(bill.getMoney());
+            billResponse.setDate(bill.getBillDate());
+            billResponse.setRemark(bill.getRemark());
+            billResponse.setShop(bill.getShop());
+            boolean flag = false;
+            for (int j = 0; j < dateOrCategoryResponseList.size(); j++) {
+                DateOrCategoryResponse dateOrCategoryResponse = dateOrCategoryResponseList.get(j);
+                if (dateOrCategoryResponse.getDate().equals(bill.getBillDate())) {
+                    //如果日期相同，就把账单信息添加到这个日期下面
+                    BigDecimal newIncome = dateOrCategoryResponse.getIncome().add(bill.getMoney());
+                    BigDecimal newExpense = dateOrCategoryResponse.getExpense().add(bill.getMoney());
+                    List<BillResponse> billResponseList = dateOrCategoryResponse.getBills();
+                    billResponseList.add(billResponse);
+                    DateOrCategoryResponse newDateOrCategoryResponse = new DateOrCategoryResponse();
+                    newDateOrCategoryResponse.setDate(dateOrCategoryResponse.getDate());
+                    newDateOrCategoryResponse.setIncome(newIncome);
+                    newDateOrCategoryResponse.setExpense(newExpense);
+                    newDateOrCategoryResponse.setBills(billResponseList);
+                    dateOrCategoryResponseList.set(j, newDateOrCategoryResponse);
+                    flag = true;
+                    break;
+                }
+            }
+            if (flag) {
+                continue;
+            }
+
+            Date date1 = bill.getBillDate();
+            BigDecimal money = bill.getMoney();
+            BigDecimal income = new BigDecimal(0);
+            BigDecimal expense = new BigDecimal(0);
+            Integer billType = bill.getBillType();
+            //判断账单类型 1-支出 0-收入
+            if (billType == 1) {
+                expense = money;
+            } else {
+                income = money;
+            }
+
+            //创建一个账单信息集合
+            List<BillResponse> billResponseList = new ArrayList<>();
+            billResponseList.add(billResponse);
+            //创建一个日期分类的对象
+            DateOrCategoryResponse dateOrCategoryResponse = new DateOrCategoryResponse();
+            dateOrCategoryResponse.setDate(date1);
+            dateOrCategoryResponse.setIncome(income);
+            dateOrCategoryResponse.setExpense(expense);
+            dateOrCategoryResponse.setBills(billResponseList);
+            dateOrCategoryResponseList.add(dateOrCategoryResponse);
+        }
+        return dateOrCategoryResponseList;
+
+
+    }
+
+    @Override
+    public void statistics(StatisticsRequest statisticsRequest, Integer userId) {
+        if (userId == null) {
+            //todo 抛出异常  用户id为空
+            log.error("用户id为空");
+            throw new RuntimeException("用户id为空");
+        }
+        if (statisticsRequest == null) {
+            //todo 抛出异常  统计信息为空
+            log.error("统计信息为空");
+            throw new RuntimeException("统计信息为空");
+        }
+
+        if (statisticsRequest.getMonth() == null) {
+            statisticsByYear(statisticsRequest.getYear());
+        } else {
+            statisticsByMonth(statisticsRequest.getYear(), statisticsRequest.getMonth());
+        }
+
+    }
+
+    public void statisticsByYear(String year) {
+
+    }
+
+    public void statisticsByMonth(String year, String month) {
+
+    }
 
 }
 

@@ -1,12 +1,11 @@
 package com.cxk.service;
 
-import com.cxk.model.domain.User;
+import com.cxk.model.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * @author houyunfei
  * @description 针对表【tb_user(用户表)】的数据库操作Service
  * @createDate 2023-02-10 13:48:46
  */
@@ -21,7 +20,7 @@ public interface UserService extends IService<User> {
      * @return 用户信息
      */
 
-    User userlogin(String phone, String userPassword, HttpServletRequest request);
+    User userLogin(String phone, String userPassword, HttpServletRequest request);
 
 
     /**
@@ -33,14 +32,14 @@ public interface UserService extends IService<User> {
      * @param checkPassword 校验密码
      * @return 是否注册成功
      */
-    Boolean register(String userName, String phone, String userPassword, String checkPassword);
+    Boolean userRegister(String userName, String phone, String userPassword, String checkPassword);
 
 
     /**
      * 用户脱敏
      *
-     * @param originUser
-     * @return
+     * @param originUser 原始用户
+     * @return 脱敏后的用户
      */
     User getSafetyUser(User originUser);
 
