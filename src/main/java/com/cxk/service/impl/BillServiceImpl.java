@@ -3,6 +3,8 @@ package com.cxk.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cxk.model.domain.request.StatisticsRequest;
+import com.cxk.model.domain.response.StatisticsByMonthResponse;
+import com.cxk.model.domain.response.StatisticsByYearResponse;
 import com.cxk.model.entity.Bill;
 import com.cxk.model.domain.request.BillAddRequest;
 import com.cxk.model.domain.response.BillResponse;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -249,33 +252,98 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
 
     }
 
+
+
     @Override
-    public void statistics(StatisticsRequest statisticsRequest, Integer userId) {
-        if (userId == null) {
-            //todo 抛出异常  用户id为空
-            log.error("用户id为空");
-            throw new RuntimeException("用户id为空");
+    public List<Bill> getBillByMonth(String month, Integer userId) {
+        //按照月份查询账单信息
+        QueryWrapper<Bill> billQueryWrapper = new QueryWrapper<>();
+        billQueryWrapper.eq("user_id", userId);
+        //数据库中的日期格式为yyyy-MM-dd
+        billQueryWrapper.like("bill_date", month);
+        List<Bill> billList = billMapper.selectList(billQueryWrapper);
+        if (billList == null) {
+            log.error("账单信息为空，没有查询到任何数据");
+            throw new RuntimeException("账单信息为空，没有查询到任何数据");
         }
-        if (statisticsRequest == null) {
-            //todo 抛出异常  统计信息为空
-            log.error("统计信息为空");
-            throw new RuntimeException("统计信息为空");
-        }
-
-        if (statisticsRequest.getMonth() == null) {
-            statisticsByYear(statisticsRequest.getYear());
-        } else {
-            statisticsByMonth(statisticsRequest.getYear(), statisticsRequest.getMonth());
-        }
-
+        return billList;
     }
 
-    public void statisticsByYear(String year) {
-
+    public StatisticsByYearResponse statisticsByYear(String date, Integer userId) {
+        //查询这一年的所有账单信息
+        QueryWrapper<Bill> billQueryWrapper = new QueryWrapper<>();
+        billQueryWrapper.like("bill_date", date);
+        billQueryWrapper.eq("user_id", userId);
+        List<Bill> billList = billMapper.selectList(billQueryWrapper);
+        if (billList == null) {
+            log.error("账单信息为空，没有查询到任何数据");
+            throw new RuntimeException("账单信息为空，没有查询到任何数据");
+        }
+        //计算每个月的收入和支出
+        List<BigDecimal> incomeList = new ArrayList<>();
+        List<BigDecimal> expenseList = new ArrayList<>();
+        for (int i = 1; i <= 12; i++) {
+            BigDecimal income = new BigDecimal(0);
+            BigDecimal expense = new BigDecimal(0);
+            for (Bill bill : billList) {
+                //获取月份
+                Date billDate = bill.getBillDate();
+                String month = String.valueOf(billDate.getMonth());
+                if (month.equals(String.valueOf(i))) {
+                    if (bill.getBillType() == 0) {
+                        income = income.add(bill.getMoney());
+                    } else {
+                        expense = expense.add(bill.getMoney());
+                    }
+                }
+            }
+            incomeList.add(income);
+            expenseList.add(expense);
+        }
+        //将计算结果封装到返回对象中
+        StatisticsByYearResponse statisticsByYearResponse = new StatisticsByYearResponse();
+        statisticsByYearResponse.setIncomeList(incomeList);
+        statisticsByYearResponse.setExpenseList(expenseList);
+        log.info("statisticsByYearResponse= " + statisticsByYearResponse);
+        return statisticsByYearResponse;
     }
 
-    public void statisticsByMonth(String year, String month) {
-
+    public StatisticsByMonthResponse statisticsByMonth(String date, Integer userId) {
+        //统计这一个月每天的收入和支出
+        QueryWrapper<Bill> billQueryWrapper = new QueryWrapper<>();
+        billQueryWrapper.like("bill_date", date);
+        billQueryWrapper.eq("user_id", userId);
+        List<Bill> billList = billMapper.selectList(billQueryWrapper);
+        if (billList == null) {
+            log.error("账单信息为空，没有查询到任何数据");
+            throw new RuntimeException("账单信息为空，没有查询到任何数据");
+        }
+        //计算每天的收入和支出
+        List<BigDecimal> incomeList = new ArrayList<>();
+        List<BigDecimal> expenseList = new ArrayList<>();
+        for (int i = 1; i <= 31; i++) {
+            BigDecimal income = new BigDecimal(0);
+            BigDecimal expense = new BigDecimal(0);
+            for (Bill bill : billList) {
+                Date billDate = bill.getBillDate();
+                String day = String.valueOf(billDate.getDay());
+                if (day.equals(String.valueOf(i))) {
+                    if (bill.getBillType() == 0) {
+                        income = income.add(bill.getMoney());
+                    } else {
+                        expense = expense.add(bill.getMoney());
+                    }
+                }
+            }
+            incomeList.add(income);
+            expenseList.add(expense);
+        }
+        //将计算结果封装到返回对象中
+        StatisticsByMonthResponse statisticsByMonthResponse = new StatisticsByMonthResponse();
+        statisticsByMonthResponse.setIncomeList(incomeList);
+        statisticsByMonthResponse.setExpenseList(expenseList);
+        log.info("statisticsByMonthResponse= " + statisticsByMonthResponse);
+        return statisticsByMonthResponse;
     }
 
 }

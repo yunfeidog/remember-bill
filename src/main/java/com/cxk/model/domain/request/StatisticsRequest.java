@@ -8,7 +8,6 @@ import java.util.Date;
 public class StatisticsRequest {
 
     private String year;
-
     private String month;
 
 }

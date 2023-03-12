@@ -1,9 +1,14 @@
 package com.cxk.service;
 
+import com.cxk.model.domain.request.BillAddRequest;
+import com.cxk.model.entity.Bill;
 import com.cxk.model.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @description 针对表【tb_user(用户表)】的数据库操作Service
@@ -42,5 +47,9 @@ public interface UserService extends IService<User> {
      * @return 脱敏后的用户
      */
     User getSafetyUser(User originUser);
+
+
+
+
 
 }

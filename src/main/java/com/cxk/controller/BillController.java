@@ -2,7 +2,10 @@ package com.cxk.controller;
 
 import com.cxk.common.Code;
 import com.cxk.common.Result;
+import com.cxk.model.domain.request.DateRequest;
 import com.cxk.model.domain.request.StatisticsRequest;
+import com.cxk.model.domain.response.StatisticsByMonthResponse;
+import com.cxk.model.domain.response.StatisticsByYearResponse;
 import com.cxk.model.entity.Bill;
 import com.cxk.model.entity.User;
 import com.cxk.model.domain.request.BillAddRequest;
@@ -11,6 +14,7 @@ import com.cxk.model.domain.response.DateOrCategoryResponse;
 import com.cxk.service.BillService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -120,6 +124,55 @@ public class BillController {
 
     }
 
+
+    /**
+     * 按照月份查询此人的全部账单信息
+     */
+    @PostMapping("/queryByMonth")
+    public Result queryByMonth(@RequestBody DateRequest dateRequest, HttpServletRequest request) {
+        Integer login = isLogin(request);
+        if (login == -1) {
+            return new Result(Code.ERR, "用户未登录");
+        }
+        String month = dateRequest.getDate();
+        List<Bill> list = billService.getBillByMonth(month, login);
+        Result result = new Result();
+        result.setCode(Code.OK);
+        result.setMsg("查询成功");
+        result.setData(list);
+        return result;
+    }
+
+
+    @PostMapping("/statisticsByYear")
+    public Result statisticByYear(@RequestBody StatisticsRequest statisticsRequest, HttpServletRequest request) {
+        Integer userId = isLogin(request);
+        if (userId == -1) {
+            return new Result(Code.ERR, "用户未登录");
+        }
+        String year = statisticsRequest.getYear();
+        StatisticsByYearResponse list = billService.statisticsByYear(year, userId);
+        Result result = new Result();
+        result.setCode(Code.OK);
+        result.setMsg("查询成功");
+        result.setData(list);
+        return result;
+    }
+
+    @PostMapping("/statisticsByMonth")
+    public Result statisticsByMonth(@RequestBody StatisticsRequest statisticsRequest, HttpServletRequest request) {
+        Integer userId = isLogin(request);
+        if (userId == -1) {
+            return new Result(Code.ERR, "用户未登录");
+        }
+        String month = statisticsRequest.getMonth();
+        StatisticsByMonthResponse list = billService.statisticsByMonth(month, userId);
+        Result result = new Result();
+        result.setCode(Code.OK);
+        result.setMsg("查询成功");
+        result.setData(list);
+        return result;
+    }
 
     /**
      * 修改账单信息
@@ -239,21 +292,6 @@ public class BillController {
     }
 
 
-    /**
-     * 账单信息统计
-     * 根据年/月 来统计账单信息
-     */
-    @GetMapping("/statistics")
-    public Result statistics(@RequestBody StatisticsRequest statisticsRequest, HttpServletRequest request) {
-        //todo 根据年/月 来统计账单信息
-        Integer userId = isLogin(request);
-        if (userId == -1) {
-            return new Result(Code.ERR, "用户未登录");
-        }
-        billService.statistics(statisticsRequest, userId);
-        return null;
-    }
-
 
     //接收前端的图片，处理得到账单的信息
     @PostMapping("/upload")
@@ -272,6 +310,8 @@ public class BillController {
         result.setMsg("上传成功");
         return result;
     }
+
+
 
 
 }
