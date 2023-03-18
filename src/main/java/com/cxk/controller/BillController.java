@@ -2,19 +2,17 @@ package com.cxk.controller;
 
 import com.cxk.common.Code;
 import com.cxk.common.Result;
-import com.cxk.model.domain.request.DateRequest;
-import com.cxk.model.domain.request.StatisticsRequest;
-import com.cxk.model.domain.response.StatisticsByMonthResponse;
-import com.cxk.model.domain.response.StatisticsByYearResponse;
-import com.cxk.model.entity.Bill;
-import com.cxk.model.entity.User;
 import com.cxk.model.domain.request.BillAddRequest;
 import com.cxk.model.domain.request.DateOrCategoryRequest;
+import com.cxk.model.domain.request.DateRequest;
+import com.cxk.model.domain.request.StatisticsRequest;
 import com.cxk.model.domain.response.DateOrCategoryResponse;
+import com.cxk.model.domain.response.StatisticsResponse;
+import com.cxk.model.entity.Bill;
+import com.cxk.model.entity.User;
 import com.cxk.service.BillService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -151,7 +149,7 @@ public class BillController {
             return new Result(Code.ERR, "用户未登录");
         }
         String year = statisticsRequest.getYear();
-        StatisticsByYearResponse list = billService.statisticsByYear(year, userId);
+        StatisticsResponse list = billService.statisticsByYear(year, userId);
         Result result = new Result();
         result.setCode(Code.OK);
         result.setMsg("查询成功");
@@ -166,7 +164,15 @@ public class BillController {
             return new Result(Code.ERR, "用户未登录");
         }
         String month = statisticsRequest.getMonth();
-        StatisticsByMonthResponse list = billService.statisticsByMonth(month, userId);
+        log.info("month = " + month );
+        String year = statisticsRequest.getYear();
+        if (month.length()<2) {
+            month = "0" + month;
+            log.info("修改过的month =" + month );
+        }
+        String date = year + "-" + month;
+        log.info("date = " + date);
+        StatisticsResponse list = billService.statisticsByMonth(date, userId);
         Result result = new Result();
         result.setCode(Code.OK);
         result.setMsg("查询成功");

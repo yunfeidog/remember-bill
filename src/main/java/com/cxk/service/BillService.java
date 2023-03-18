@@ -1,13 +1,10 @@
 package com.cxk.service;
 
-import com.cxk.model.domain.request.StatisticsRequest;
-import com.cxk.model.domain.response.StatisticsByMonthResponse;
-import com.cxk.model.domain.response.StatisticsByYearResponse;
-import com.cxk.model.entity.Bill;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.cxk.model.domain.request.BillAddRequest;
 import com.cxk.model.domain.response.DateOrCategoryResponse;
-import org.springframework.format.annotation.DateTimeFormat;
+import com.cxk.model.domain.response.StatisticsResponse;
+import com.cxk.model.entity.Bill;
 
 import java.util.Date;
 import java.util.List;
@@ -41,7 +38,7 @@ public interface BillService extends IService<Bill> {
     List<Bill> getBillByMonth(String month, Integer userId);
 
 
-    StatisticsByYearResponse statisticsByYear(String date, Integer userId);
+    StatisticsResponse statisticsByYear(String date, Integer userId);
 
-    StatisticsByMonthResponse statisticsByMonth(String date, Integer userId);
+    StatisticsResponse statisticsByMonth(String date, Integer userId);
 }

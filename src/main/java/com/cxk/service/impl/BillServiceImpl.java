@@ -2,15 +2,13 @@ package com.cxk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.cxk.model.domain.request.StatisticsRequest;
-import com.cxk.model.domain.response.StatisticsByMonthResponse;
-import com.cxk.model.domain.response.StatisticsByYearResponse;
-import com.cxk.model.entity.Bill;
+import com.cxk.mapper.BillMapper;
 import com.cxk.model.domain.request.BillAddRequest;
 import com.cxk.model.domain.response.BillResponse;
 import com.cxk.model.domain.response.DateOrCategoryResponse;
+import com.cxk.model.domain.response.StatisticsResponse;
+import com.cxk.model.entity.Bill;
 import com.cxk.service.BillService;
-import com.cxk.mapper.BillMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -18,7 +16,10 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -253,7 +254,6 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
     }
 
 
-
     @Override
     public List<Bill> getBillByMonth(String month, Integer userId) {
         //按照月份查询账单信息
@@ -269,8 +269,8 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
         return billList;
     }
 
-    public StatisticsByYearResponse statisticsByYear(String date, Integer userId) {
-        //查询这一年的所有账单信息
+    public StatisticsResponse statisticsByYear(String date, Integer userId) {
+        //统计这一年每个月的收入和支出
         QueryWrapper<Bill> billQueryWrapper = new QueryWrapper<>();
         billQueryWrapper.like("bill_date", date);
         billQueryWrapper.eq("user_id", userId);
@@ -279,45 +279,91 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
             log.error("账单信息为空，没有查询到任何数据");
             throw new RuntimeException("账单信息为空，没有查询到任何数据");
         }
+
         //计算每个月的收入和支出
         List<BigDecimal> incomeList = new ArrayList<>();
         List<BigDecimal> expenseList = new ArrayList<>();
-        for (int i = 1; i <= 12; i++) {
+        for (int i = 0; i < 12; i++) {
             BigDecimal income = new BigDecimal(0);
             BigDecimal expense = new BigDecimal(0);
-            for (Bill bill : billList) {
-                //获取月份
+            for (int j = 0; j < billList.size(); j++) {
+                Bill bill = billList.get(j);
+                //获取账单的日期
                 Date billDate = bill.getBillDate();
-                String month = String.valueOf(billDate.getMonth());
-                if (month.equals(String.valueOf(i))) {
-                    if (bill.getBillType() == 0) {
-                        income = income.add(bill.getMoney());
+                //获取账单的金额
+                BigDecimal money = bill.getMoney();
+                //获取账单的类型
+                Integer billType = bill.getBillType();
+                //获取账单的月份
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(billDate);
+                int month = calendar.get(Calendar.MONTH) + 1;
+                if (month == i + 1) {
+                    if (billType == 1) {
+                        expense = expense.add(money);
                     } else {
-                        expense = expense.add(bill.getMoney());
+                        income = income.add(money);
                     }
                 }
             }
             incomeList.add(income);
             expenseList.add(expense);
         }
-        //将计算结果封装到返回对象中
-        StatisticsByYearResponse statisticsByYearResponse = new StatisticsByYearResponse();
-        statisticsByYearResponse.setIncomeList(incomeList);
-        statisticsByYearResponse.setExpenseList(expenseList);
-        log.info("statisticsByYearResponse= " + statisticsByYearResponse);
-        return statisticsByYearResponse;
+
+        //计算每个分类的支出
+        List<String> categoryList = new ArrayList<>();
+        List<BigDecimal> categoryListMoney = new ArrayList<>();
+        for (int i = 0; i < billList.size(); i++) {
+            Bill bill = billList.get(i);
+            //获取账单的类型
+            Integer billType = bill.getBillType();
+            //获取账单的金额
+            BigDecimal money = bill.getMoney();
+            //获取账单的分类
+            String category = bill.getCategory();
+            if (billType == 1) {
+                if (categoryList.contains(category)) {
+                    int index = categoryList.indexOf(category);
+                    BigDecimal newMoney = categoryListMoney.get(index).add(money);
+                    categoryListMoney.set(index, newMoney);
+                } else {
+                    categoryList.add(category);
+                    categoryListMoney.add(money);
+                }
+            }
+        }
+        //创建一个分类的对象
+        StatisticsResponse statisticsResponse = new StatisticsResponse();
+        statisticsResponse.setCategoryList(categoryList);
+        statisticsResponse.setCategoryListMoney(categoryListMoney);
+        statisticsResponse.setIncomeList(incomeList);
+        statisticsResponse.setExpenseList(expenseList);
+        return statisticsResponse;
     }
 
-    public StatisticsByMonthResponse statisticsByMonth(String date, Integer userId) {
+    public StatisticsResponse statisticsByMonth(String date, Integer userId) {
         //统计这一个月每天的收入和支出
         QueryWrapper<Bill> billQueryWrapper = new QueryWrapper<>();
         billQueryWrapper.like("bill_date", date);
         billQueryWrapper.eq("user_id", userId);
         List<Bill> billList = billMapper.selectList(billQueryWrapper);
+
         if (billList == null) {
             log.error("账单信息为空，没有查询到任何数据");
             throw new RuntimeException("账单信息为空，没有查询到任何数据");
         }
+        //打印所有账单信息
+        log.info("userId= " + userId + "的账单信息如下");
+        for (Bill bill : billList) {
+            //格式化日期xxxx-xx-xx
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            String billDate = simpleDateFormat.format(bill.getBillDate());
+
+            log.info("userId= " + userId + "  money= " + bill.getMoney() + "  billDate= " + billDate + "  billCategory= " + bill.getCategory());
+        }
+
+        //下面是数据处理部分
+
         //计算每天的收入和支出
         List<BigDecimal> incomeList = new ArrayList<>();
         List<BigDecimal> expenseList = new ArrayList<>();
@@ -338,12 +384,36 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
             incomeList.add(income);
             expenseList.add(expense);
         }
+        List<String> categoryList = new ArrayList<>();
+        List<BigDecimal> categoryListMoney = new ArrayList<>();
+        //计算每个分类的支出
+        for (int i = 0; i < billList.size(); i++) {
+            Bill bill = billList.get(i);
+            String category = bill.getCategory();
+            BigDecimal money = bill.getMoney();
+            if (bill.getBillType() == 1) {
+                if (categoryList.contains(category)) {
+                    int index = categoryList.indexOf(category);
+                    BigDecimal money1 = categoryListMoney.get(index);
+                    money1 = money1.add(money);
+                    categoryListMoney.set(index, money1);
+                } else {
+                    categoryList.add(category);
+                    categoryListMoney.add(money);
+                }
+            }
+        }
+
         //将计算结果封装到返回对象中
-        StatisticsByMonthResponse statisticsByMonthResponse = new StatisticsByMonthResponse();
-        statisticsByMonthResponse.setIncomeList(incomeList);
-        statisticsByMonthResponse.setExpenseList(expenseList);
-        log.info("statisticsByMonthResponse= " + statisticsByMonthResponse);
-        return statisticsByMonthResponse;
+        StatisticsResponse statisticsResponse = new StatisticsResponse();
+        statisticsResponse.setIncomeList(incomeList);
+        statisticsResponse.setExpenseList(expenseList);
+        statisticsResponse.setCategoryList(categoryList);
+        statisticsResponse.setCategoryListMoney(categoryListMoney);
+        log.info("categoryList= " + categoryList);
+        log.info("categoryListMoney= " + categoryListMoney);
+        log.info("statisticsByMonthResponse= " + statisticsResponse);
+        return statisticsResponse;
     }
 
 }
