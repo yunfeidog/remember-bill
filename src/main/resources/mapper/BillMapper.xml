@@ -8,7 +8,6 @@
             <id property="id" column="id" jdbcType="INTEGER"/>
             <result property="userId" column="user_id" jdbcType="INTEGER"/>
             <result property="money" column="money" jdbcType="DECIMAL"/>
-            <result property="billType" column="bill_type" jdbcType="TINYINT"/>
             <result property="category" column="category" jdbcType="VARCHAR"/>
             <result property="billDate" column="bill_date" jdbcType="DATE"/>
             <result property="shop" column="shop" jdbcType="VARCHAR"/>
@@ -19,8 +18,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,user_id,money,
-        bill_type,category,bill_date,
+        id,user_id,money,category,bill_date,
         shop,remark,is_delete,
         create_time,update_time
     </sql>

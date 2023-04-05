@@ -10,15 +10,12 @@ import java.util.Date;
 @Data
 public class BillResponse {
     private Integer id;
-    private String typeName;
+    private String category;
 
-    /**
-     * 0-支出 1-收入
-     */
-    private Integer payType;
-    private BigDecimal amount;
+
+    private BigDecimal money;
 
     private String shop;
-    private Date date;
+    private Date billDate;
     private String remark;
 }

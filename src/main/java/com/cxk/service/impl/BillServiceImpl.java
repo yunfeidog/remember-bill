@@ -1,25 +1,29 @@
 package com.cxk.service.impl;
 
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cxk.mapper.BillMapper;
 import com.cxk.model.domain.request.BillAddRequest;
 import com.cxk.model.domain.response.BillResponse;
 import com.cxk.model.domain.response.DateOrCategoryResponse;
+import com.cxk.model.domain.response.OCRResponse;
 import com.cxk.model.domain.response.StatisticsResponse;
 import com.cxk.model.entity.Bill;
 import com.cxk.service.BillService;
+import com.cxk.utils.OCRUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -51,14 +55,6 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
         Bill bill1 = new Bill();
         bill1.setUserId(userId);
         bill1.setMoney(bill.getBillAmount());
-        bill1.setBillType(bill.getBillType());
-        //现在分类不是数组了，是字符串
-//        List<String> billCategory = bill.getBillCategory();
-//        //将分类数组转换为字符串存入数据库
-//        String category = StringUtils.join(billCategory, ",");
-//        bill1.setCategory(category);
-//        log.info("category:{}", category);
-//        bill1.setCategory(category);
         bill1.setCategory(bill.getBillCategory());
         bill1.setBillDate(bill.getBillDate());
         bill1.setShop(bill.getBillShopkeeper());
@@ -97,15 +93,9 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
         List<BillAddRequest> billList1 = billList.stream().map(bill -> {
             BillAddRequest billAddRequest = new BillAddRequest();
             billAddRequest.setBillAmount(bill.getMoney());
-            billAddRequest.setBillType(bill.getBillType());
             billAddRequest.setBillDate(bill.getBillDate());
             billAddRequest.setBillShopkeeper(bill.getShop());
             billAddRequest.setBillRemark(bill.getRemark());
-            //现在分类不是数组了，是字符串
-//            String category = bill.getCategory();
-//            String[] split = category.split(",");
-//            List<String> strings = Arrays.asList(split);
-//            billAddRequest.setBillCategory(strings);
             billAddRequest.setBillCategory(bill.getCategory());
             return billAddRequest;
         }).collect(Collectors.toList());
@@ -131,35 +121,33 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
     }
 
     @Override
-    public boolean updateBill(Bill bill, Bill oldBill) {
-        if (bill == null) {
+    public boolean updateBill(Bill newBill, Integer billId) {
+        Bill oldBill = this.getOldBill(billId);
+        if (newBill == null) {
             //todo 抛出异常  账单信息为空
             log.error("新改的账单信息为空");
             return false;
         }
+
         if (oldBill == null) {
             //todo 抛出异常  账单信息为空
             log.error("旧的账单信息为空");
             return false;
         }
-        //判断账单信息是否有修改
-        if (bill.getMoney().equals(oldBill.getMoney()) && bill.getBillType().equals(oldBill.getBillType()) && bill.getCategory().equals(oldBill.getCategory()) && bill.getBillDate().equals(oldBill.getBillDate()) && bill.getShop().equals(oldBill.getShop()) && bill.getRemark().equals(oldBill.getRemark())) {
-            //todo 抛出异常  账单信息未修改
-            log.error("账单信息未修改");
-            return false;
-        }
-        boolean updateResult = this.updateById(bill);
+        newBill.setId(oldBill.getId());
+        boolean updateResult = this.updateById(newBill);
         if (!updateResult) {
-            //todo 抛出异常  账单信息修改失败
-            log.error("账单信息修改失败");
+            //todo 抛出异常  账单信息更新失败
+            log.error("账单信息更新失败");
             return false;
         }
+        log.info("账单信息更新成功");
         return true;
 
     }
 
     @Override
-    public List<DateOrCategoryResponse> getBillListByDateOrCategory(String category, Date date, Integer userId) {
+    public List<DateOrCategoryResponse> getBillListByDateOrCategory(String category, String date, Integer userId) {
         if (userId == null) {
             //todo 抛出异常  用户id为空
             log.error("用户id为空");
@@ -176,7 +164,9 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
             billQueryWrapper.eq("category", category);
         }
         if (date != null) {
-            billQueryWrapper.eq("bill_date", date);
+            //查询当月的账单信息，date的格式为2023-02
+            String dateStr = date + "%";
+            billQueryWrapper.like("bill_date", dateStr);
         }
         List<Bill> billList = billMapper.selectList(billQueryWrapper);
         log.info("userId=" + userId);
@@ -191,66 +181,40 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
 
         //将账单信息转换为前端需要的格式 并且按照日期分类
         List<DateOrCategoryResponse> dateOrCategoryResponseList = new ArrayList<>();
+        HashSet<String> stringHashSet = new HashSet<>();
         for (int i = 0; i < billList.size(); i++) {
             Bill bill = billList.get(i);
-            //创建一个账单信息
-            BillResponse billResponse = new BillResponse();
-            billResponse.setId(bill.getId());
-            billResponse.setTypeName(bill.getCategory());
-            billResponse.setPayType(bill.getBillType());
-            billResponse.setAmount(bill.getMoney());
-            billResponse.setDate(bill.getBillDate());
-            billResponse.setRemark(bill.getRemark());
-            billResponse.setShop(bill.getShop());
-            boolean flag = false;
-            for (int j = 0; j < dateOrCategoryResponseList.size(); j++) {
-                DateOrCategoryResponse dateOrCategoryResponse = dateOrCategoryResponseList.get(j);
-                if (dateOrCategoryResponse.getDate().equals(bill.getBillDate())) {
-                    //如果日期相同，就把账单信息添加到这个日期下面
-                    BigDecimal newIncome = dateOrCategoryResponse.getIncome().add(bill.getMoney());
-                    BigDecimal newExpense = dateOrCategoryResponse.getExpense().add(bill.getMoney());
-                    List<BillResponse> billResponseList = dateOrCategoryResponse.getBills();
-                    billResponseList.add(billResponse);
-                    DateOrCategoryResponse newDateOrCategoryResponse = new DateOrCategoryResponse();
-                    newDateOrCategoryResponse.setDate(dateOrCategoryResponse.getDate());
-                    newDateOrCategoryResponse.setIncome(newIncome);
-                    newDateOrCategoryResponse.setExpense(newExpense);
-                    newDateOrCategoryResponse.setBills(billResponseList);
-                    dateOrCategoryResponseList.set(j, newDateOrCategoryResponse);
-                    flag = true;
-                    break;
+            Date billDate = bill.getBillDate();
+            //将日期格式转换为yyyy-MM的格式
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            String dateStr = simpleDateFormat.format(billDate);
+            if (stringHashSet.contains(dateStr)) {
+                //如果包含这个日期，将账单信息添加到这个日期的账单信息中
+                for (int j = 0; j < dateOrCategoryResponseList.size(); j++) {
+                    DateOrCategoryResponse dateOrCategoryResponse = dateOrCategoryResponseList.get(j);
+                    if (dateOrCategoryResponse.getDate().equals(dateStr)) {
+                        //将bill转换为billResponse,使用spring的BeanUtils工具类
+                        BillResponse billResponse = new BillResponse();
+                        BeanUtils.copyProperties(bill, billResponse);
+                        dateOrCategoryResponse.getBills().add(billResponse);
+                    }
                 }
-            }
-            if (flag) {
-                continue;
-            }
-
-            Date date1 = bill.getBillDate();
-            BigDecimal money = bill.getMoney();
-            BigDecimal income = new BigDecimal(0);
-            BigDecimal expense = new BigDecimal(0);
-            Integer billType = bill.getBillType();
-            //判断账单类型 1-支出 0-收入
-            if (billType == 1) {
-                expense = money;
             } else {
-                income = money;
-            }
+                //如果没有包含这个日期，新建一个日期的账单信息
+                DateOrCategoryResponse dateOrCategoryResponse = new DateOrCategoryResponse();
+                dateOrCategoryResponse.setDate(dateStr);
+                List<BillResponse> bills = new ArrayList<>();
+                //将bill转换为billResponse,使用spring的BeanUtils工具类
+                BillResponse billResponse = new BillResponse();
+                BeanUtils.copyProperties(bill, billResponse);
+                bills.add(billResponse);
+                dateOrCategoryResponse.setBills(bills);
+                dateOrCategoryResponseList.add(dateOrCategoryResponse);
+                stringHashSet.add(dateStr);
 
-            //创建一个账单信息集合
-            List<BillResponse> billResponseList = new ArrayList<>();
-            billResponseList.add(billResponse);
-            //创建一个日期分类的对象
-            DateOrCategoryResponse dateOrCategoryResponse = new DateOrCategoryResponse();
-            dateOrCategoryResponse.setDate(date1);
-            dateOrCategoryResponse.setIncome(income);
-            dateOrCategoryResponse.setExpense(expense);
-            dateOrCategoryResponse.setBills(billResponseList);
-            dateOrCategoryResponseList.add(dateOrCategoryResponse);
+            }
         }
         return dateOrCategoryResponseList;
-
-
     }
 
 
@@ -292,18 +256,18 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
                 Date billDate = bill.getBillDate();
                 //获取账单的金额
                 BigDecimal money = bill.getMoney();
-                //获取账单的类型
-                Integer billType = bill.getBillType();
                 //获取账单的月份
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTime(billDate);
                 int month = calendar.get(Calendar.MONTH) + 1;
                 if (month == i + 1) {
-                    if (billType == 1) {
+                    //如果金额为负数，就是支出
+                    if (money.compareTo(new BigDecimal(0)) < 0) {
                         expense = expense.add(money);
                     } else {
                         income = income.add(money);
                     }
+
                 }
             }
             incomeList.add(income);
@@ -316,12 +280,12 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
         for (int i = 0; i < billList.size(); i++) {
             Bill bill = billList.get(i);
             //获取账单的类型
-            Integer billType = bill.getBillType();
             //获取账单的金额
             BigDecimal money = bill.getMoney();
             //获取账单的分类
             String category = bill.getCategory();
-            if (billType == 1) {
+            //如果金额为负数，就是支出
+            if (money.compareTo(new BigDecimal(0)) < 0) {
                 if (categoryList.contains(category)) {
                     int index = categoryList.indexOf(category);
                     BigDecimal newMoney = categoryListMoney.get(index).add(money);
@@ -373,8 +337,9 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
             for (Bill bill : billList) {
                 Date billDate = bill.getBillDate();
                 String day = String.valueOf(billDate.getDay());
+                BigDecimal money = bill.getMoney();
                 if (day.equals(String.valueOf(i))) {
-                    if (bill.getBillType() == 0) {
+                    if (money.compareTo(new BigDecimal(0)) > 0) {
                         income = income.add(bill.getMoney());
                     } else {
                         expense = expense.add(bill.getMoney());
@@ -391,7 +356,8 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
             Bill bill = billList.get(i);
             String category = bill.getCategory();
             BigDecimal money = bill.getMoney();
-            if (bill.getBillType() == 1) {
+
+            if (money.compareTo(new BigDecimal(0)) < 0) {
                 if (categoryList.contains(category)) {
                     int index = categoryList.indexOf(category);
                     BigDecimal money1 = categoryListMoney.get(index);
@@ -415,6 +381,99 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill>
         log.info("statisticsByMonthResponse= " + statisticsResponse);
         return statisticsResponse;
     }
+
+    @Override
+    public OCRResponse handleImage(MultipartFile file) {
+        OCRResponse ocrResponse = new OCRResponse();
+        String resultJSON = OCRUtils.recognizeReceipt(file);
+        JSONObject jsonObject = JSON.parseObject(resultJSON);
+        log.info("jsonObject= " + jsonObject);
+        //获取图片识别的结果
+        String result = jsonObject.getString("result");
+        log.info("result= " + result);
+        //拿到result中的item_list
+        JSONObject jsonObject1 = JSON.parseObject(result);
+        String itemList = jsonObject1.getString("item_list");
+        log.info("itemList= " + itemList);
+        //将item_list转换为数组
+        JSONArray jsonArray = JSON.parseArray(itemList);
+        log.info("jsonArray= " + jsonArray);
+        log.info(String.valueOf(jsonArray.size()));
+        //遍历数组，获取每一个item
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JSONObject jsonObject2 = jsonArray.getJSONObject(i);
+            String item = jsonObject2.getString("key");
+            log.info("key= " + item);
+            //判断item中是否包含金额
+            if (item.contains("money")) {
+                String value = jsonObject2.getString("value");
+                log.info("value= " + value);
+                //将金额封装到返回对象中
+                ocrResponse.setMoney(value);
+            }
+            //判断item中是否包含日期
+            if (item.contains("date")) {
+                String value = jsonObject2.getString("value");
+                log.info("value= " + value);
+                //将日期封装到返回对象中
+                ocrResponse.setDate(value);
+            }
+            //判断item中是否包含no
+            if (item.contains("no")) {
+                String value = jsonObject2.getString("value");
+                log.info("value= " + value);
+                //将no封装到返回对象中
+                ocrResponse.setNo(value);
+            }
+
+            if (item.contains("shop")) {
+                String value = jsonObject2.getString("value");
+                log.info("检测到有shop信息");
+                log.info("value= " + value);
+                //将no封装到返回对象中
+                ocrResponse.setShop(value);
+            }
+
+            if (item.contains("shop_no")) {
+                String value = jsonObject2.getString("value");
+                log.info("value= " + value);
+                //将no封装到返回对象中
+                ocrResponse.setShop_no(value);
+            }
+
+            if (item.contains("sku")) {
+                String value = jsonObject2.getString("value");
+                log.info("value= " + value);
+                //将no封装到返回对象中
+                ocrResponse.setSku(value);
+            }
+        }
+        log.info("结果如下");
+        log.info("ocrResponse= " );
+        log.info(ocrResponse.toString());
+
+
+        return ocrResponse;
+    }
+
+    @Override
+    public List<Bill> getBillBetweenDates(String startDate, String endDate, Integer userId) {
+        //按照日期范围查询账单信息
+        QueryWrapper<Bill> billQueryWrapper = new QueryWrapper<>();
+        billQueryWrapper.eq("user_id", userId);
+        //数据库中的日期格式为yyyy-MM-dd
+        billQueryWrapper.between("bill_date", startDate, endDate);
+        List<Bill> billList = billMapper.selectList(billQueryWrapper);
+        if (billList == null) {
+            log.error("账单信息为空，没有查询到任何数据");
+            throw new RuntimeException("账单信息为空，没有查询到任何数据");
+        }
+        return billList;
+    }
+
+
+
+
 
 }
 

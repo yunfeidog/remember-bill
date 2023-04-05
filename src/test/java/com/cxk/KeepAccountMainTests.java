@@ -12,7 +12,7 @@ import java.util.List;
 
 
 @SpringBootTest
-class SpringBootDemoApplicationTests {
+class KeepAccountMainTests {
 
     @Test
     void contextLoads() {

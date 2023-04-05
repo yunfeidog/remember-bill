@@ -3,7 +3,7 @@ package com.cxk.common;
 
 
 /**
- *
+ * @description: 错误码
  */
 
 public enum ErrorCode {

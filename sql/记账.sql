@@ -26,7 +26,6 @@ CREATE TABLE `tb_bill`
     `id`          INT(11)        NOT NULL AUTO_INCREMENT COMMENT '账单id',
     `user_id`     INT(11)        NOT NULL COMMENT '用户id',
     `money`       DECIMAL(10, 2) NOT NULL COMMENT '金额(可能小数)',
-    `bill_type`        TINYINT(1)     NOT NULL COMMENT '类型(收入/支出) 0-收入 1-支出',
     `category`    VARCHAR(32)    NOT NULL COMMENT '分类(数组)(餐饮/购物/交通/住房/娱乐/医疗/通讯/人情/其他)',
     `bill_date`        DATE           NOT NULL COMMENT '日期(年月日)',
     `shop`        VARCHAR(32)    NULL     DEFAULT NULL COMMENT '商家(可为空)',

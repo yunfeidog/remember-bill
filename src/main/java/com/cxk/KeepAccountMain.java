@@ -8,9 +8,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 @MapperScan("com.cxk.mapper")
-public class SpringBootDemoApplication {
+public class KeepAccountMain {
     public static void main(String[] args) {
-        SpringApplication.run(SpringBootDemoApplication.class, args);
+        SpringApplication.run(KeepAccountMain.class, args);
     }
 
 }

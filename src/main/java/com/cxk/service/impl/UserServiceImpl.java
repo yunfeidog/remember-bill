@@ -2,22 +2,16 @@ package com.cxk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.cxk.model.domain.request.BillAddRequest;
-import com.cxk.model.entity.Bill;
+import com.cxk.mapper.UserMapper;
 import com.cxk.model.entity.User;
 import com.cxk.service.UserService;
-import com.cxk.mapper.UserMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-
-import java.util.Date;
-import java.util.List;
 
 import static com.cxk.constant.UserConstant.USER_LOGIN_STATE;
 

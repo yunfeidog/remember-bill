@@ -1,23 +1,16 @@
-package com.cxk.model.entity;
+package com.cxk.model.domain.request;
 
-import com.baomidou.mybatisplus.annotation.*;
 
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.util.Date;
 import lombok.Data;
 
-/**
- * 账单表
- * @TableName tb_bill
- */
-@TableName(value ="tb_bill")
+import java.math.BigDecimal;
+import java.util.Date;
+
 @Data
-public class Bill implements Serializable {
+public class UpdateBillRequest {
     /**
      * 账单id
      */
-    @TableId(type = IdType.AUTO)
     private Integer id;
 
     /**
@@ -56,22 +49,6 @@ public class Bill implements Serializable {
      */
     private String remark;
 
-    /**
-     * 是否被删除 0-未删除 1-已删除
-     */
-    @TableLogic
-    private Integer isDelete;
 
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
-
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
 }
+

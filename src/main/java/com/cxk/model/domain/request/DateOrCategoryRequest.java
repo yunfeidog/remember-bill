@@ -12,8 +12,10 @@ import java.util.Date;
 @Data
 public class DateOrCategoryRequest {
 
-        @DateTimeFormat(pattern = "yyyy-MM-dd")
-        private Date date;
+        /**
+         * xxxx-xx
+         */
+        private String date;
 
         private String category;
 }

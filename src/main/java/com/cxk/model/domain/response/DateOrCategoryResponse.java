@@ -13,8 +13,7 @@ import java.util.List;
 @Data
 public class DateOrCategoryResponse {
 
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private Date date;
+    private String date;
 
     private BigDecimal income;
 

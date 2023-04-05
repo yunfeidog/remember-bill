@@ -1,12 +1,15 @@
 package com.cxk.service;
 
+import com.cxk.model.domain.response.DateOrCategoryResponse;
 import com.cxk.model.domain.response.StatisticsResponse;
+import com.cxk.model.entity.Bill;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -67,10 +70,22 @@ class BillServiceTest {
 
     @Test
     void addBill() {
+        Bill bill = new Bill();
+        bill.setUserId(1);
+        bill.setMoney(new BigDecimal("200"));
+        bill.setCategory("其他");
+        //格式化日期
+        bill.setBillDate(new Date());
+        bill.setShop("蔡徐坤");
+        bill.setRemark("蔡徐坤");
+
     }
 
     @Test
     void getBillList() {
+        double a=0.56;
+        double b=0.11;
+        System.out.println(a+b);
     }
 
     @Test
@@ -79,9 +94,37 @@ class BillServiceTest {
 
     @Test
     void updateBill() {
+        Bill newBill = new Bill();
+        Integer billId = 4;
+        newBill.setId(billId);
+        newBill.setUserId(1);
+        newBill.setMoney(new BigDecimal("500"));
+        newBill.setCategory("其他");
+        boolean result = billService.updateBill(newBill, billId);
+        System.out.println("result = " + result);
+
     }
 
     @Test
     void getBillListByDateOrCategory() {
+        String category = "";
+        String date = "2023-02";
+        Integer userId = 1;
+        List<DateOrCategoryResponse> billListByDateOrCategory = billService.getBillListByDateOrCategory(category, date, userId);
+        billListByDateOrCategory.forEach(System.out::println);
+    }
+
+    @Test
+    void handleImage() {
+    }
+
+    @Test
+    void getBillBetweenDates() {
+        String startDate = "2023-02-01";
+        String endDate = "2023-02-04";
+        Integer userId = 1;
+        List<Bill> billBetweenDates = billService.getBillBetweenDates(startDate, endDate, userId);
+        log.info("一共有{}条数据", billBetweenDates.size());
+        billBetweenDates.forEach(System.out::println);
     }
 }

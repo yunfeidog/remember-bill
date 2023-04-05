@@ -2,22 +2,23 @@ package com.cxk.controller;
 
 import com.cxk.common.Code;
 import com.cxk.common.Result;
-import com.cxk.model.domain.request.BillAddRequest;
-import com.cxk.model.domain.request.DateOrCategoryRequest;
-import com.cxk.model.domain.request.DateRequest;
-import com.cxk.model.domain.request.StatisticsRequest;
+import com.cxk.model.domain.request.*;
 import com.cxk.model.domain.response.DateOrCategoryResponse;
+import com.cxk.model.domain.response.OCRResponse;
 import com.cxk.model.domain.response.StatisticsResponse;
 import com.cxk.model.entity.Bill;
 import com.cxk.model.entity.User;
 import com.cxk.service.BillService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -109,7 +110,7 @@ public class BillController {
             return new Result(Code.ERR, "用户未登录");
         }
         String category = dateOrCategoryRequest.getCategory();
-        Date date = dateOrCategoryRequest.getDate();
+        String date = dateOrCategoryRequest.getDate();
         log.info("date = " + date);
         List<DateOrCategoryResponse> list = billService.getBillListByDateOrCategory(category, date, userId);
         log.info("list= " + list);
@@ -164,11 +165,11 @@ public class BillController {
             return new Result(Code.ERR, "用户未登录");
         }
         String month = statisticsRequest.getMonth();
-        log.info("month = " + month );
+        log.info("month = " + month);
         String year = statisticsRequest.getYear();
-        if (month.length()<2) {
+        if (month.length() < 2) {
             month = "0" + month;
-            log.info("修改过的month =" + month );
+            log.info("修改过的month =" + month);
         }
         String date = year + "-" + month;
         log.info("date = " + date);
@@ -188,7 +189,7 @@ public class BillController {
      * @return 修改是否成功
      */
     @PutMapping("/update")
-    public Result updateBill(@RequestBody Bill bill, HttpServletRequest request) {
+    public Result updateBill(@RequestBody UpdateBillRequest bill, HttpServletRequest request) {
         //todo 判断用户是否登录
         User user = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
         if (user == null) {
@@ -197,8 +198,11 @@ public class BillController {
             return new Result(Code.ERR, "用户未登录");
         }
         //todo 调用service层的方法，修改账单
-        Bill oldBill = billService.getOldBill(bill.getId());
-        boolean updateResult = billService.updateBill(bill, oldBill);
+        Integer billId= bill.getId();
+        Bill newBill = new Bill();
+        //将bill的属性值赋值给newBill
+        BeanUtils.copyProperties(bill, newBill);
+        boolean updateResult = billService.updateBill(newBill, billId);
 
         if (!updateResult) {
             //todo 抛出异常  修改失败
@@ -298,7 +302,6 @@ public class BillController {
     }
 
 
-
     //接收前端的图片，处理得到账单的信息
     @PostMapping("/upload")
     public Result upload(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
@@ -310,9 +313,21 @@ public class BillController {
             return new Result(Code.ERR, "用户未登录");
         }
         //todo 调用service层的方法，处理图片
-        //todo 返回数据
+        if (file.isEmpty()){
+            log.error("上传失败，请选择文件");
+            return new Result(Code.ERR, "上传失败，请选择文件");
+        }
+        log.info("接收到的图片为：" + file.getOriginalFilename());
+        //打印接收到的图片的信息
+        log.info("图片的大小为：" + file.getSize());
+        log.info("图片的类型为：" + file.getContentType());
+        log.info("图片的名称为：" + file.getName());
+        //调用service层的方法，处理图片
+        OCRResponse ocrResponse = billService.handleImage(file);
+
         Result result = new Result();
         result.setCode(Code.OK);
+        result.setData(ocrResponse);
         result.setMsg("上传成功");
         return result;
     }

@@ -12,10 +12,7 @@ import java.util.Date;
 @Data
 public class BillAddRequest {
 
-    /**
-     * 账单类型 0-收入 1-支出
-     */
-    private Integer billType;
+
 
     /**
      * 账单分类 分类(数组)(餐饮/购物/交通/住房/娱乐/医疗/通讯/人情/其他)
