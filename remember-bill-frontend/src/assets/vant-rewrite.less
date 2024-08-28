@@ -1,0 +1,15 @@
+// 将提示框的文字颜色和背景色设置为黑色和半透明白色
+.van-toast__text {
+  font-size: 14px;
+  color: #333333;
+
+}
+
+.van-toast {
+  background-color: rgba(0, 0, 0, 0.6);
+  //q:这里的背景为什么不生效
+  //a:因为van-toast__text的背景色覆盖了van-toast的背景色
+  border-radius: 16px;
+    padding: 10px 20px;
+  width: 100%;
+}
